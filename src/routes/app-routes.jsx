@@ -11,6 +11,7 @@ import AuthRoute from "./auth-route";
 import ProtectedRoute from "./protected-route";
 import NotificationList from "@/app/notification/notification-list";
 import CreateNotification from "@/app/notification/create-notification";
+import Dashboard from "@/app/dashboard/dashboard";
 
 function AppRoutes() {
   return (
@@ -29,6 +30,14 @@ function AppRoutes() {
           <Route path="/maintenance" element={<Maintenance />} />
         </Route>
         <Route path="/" element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <Suspense fallback={<LoadingBar />}>
+                <Dashboard />
+              </Suspense>
+            }
+          />
           <Route
             path="/settings"
             element={

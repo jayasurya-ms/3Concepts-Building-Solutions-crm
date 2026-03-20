@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BANNER_API } from "@/constants/apiConstants";
+import { NOTIFICATION_API } from "@/constants/apiConstants";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image, Loader2 } from "lucide-react";
@@ -18,17 +18,16 @@ const CreateNotification = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    notification_sort: "",
-    notification_text: "",
-    notification_link: "",
-    notification_image_alt: "",
-    notification_image: null,
+    notification_date: "",
+    notification_heading: "",
+    notification_image: "",
+    notification_description: "",
   });
 
   const [errors, setErrors] = useState({});
 
   const [preview, setPreview] = useState({
-    banner_image: "",
+    notification_image: "",
   });
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,26 +48,21 @@ const CreateNotification = () => {
     const newErrors = {};
     let isValid = true;
 
-    if (!formData.banner_sort.trim()) {
-      newErrors.banner_sort = "Sort order is required";
-      isValid = false;
-    } else if (!/^\d+$/.test(formData.banner_sort)) {
-      newErrors.banner_sort = "Sort order must be a number";
+    if (!formData.notification_date) {
+      newErrors.notification_date = "Notification date is required";
       isValid = false;
     }
-
-    if (formData.banner_link.trim() && !isValidUrl(formData.banner_link)) {
-      newErrors.banner_link = "Please enter a valid URL";
+    if (!formData.notification_heading) {
+      newErrors.notification_heading = "Notification heading is required";
       isValid = false;
     }
-
-    if (!formData.banner_image_alt.trim()) {
-      newErrors.banner_image_alt = "Alt text is required";
+    if (!preview.notification_image && !formData.notification_image) {
+      newErrors.notification_image = "Notification image is required";
       isValid = false;
     }
-
-    if (!preview.banner_image && !formData.banner_image) {
-      newErrors.banner_image = "Banner image is required";
+    if (!formData.notification_description) {
+      newErrors.notification_description =
+        "Notification description is required";
       isValid = false;
     }
 
@@ -76,14 +70,6 @@ const CreateNotification = () => {
     return isValid;
   };
 
-  const isValidUrl = (string) => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
   const handleImageChange = (fieldName, file) => {
     if (file) {
       setFormData({ ...formData, [fieldName]: file });
@@ -101,22 +87,24 @@ const CreateNotification = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
+      toast.error("Please fill all the fields");
       return;
     }
 
     const formDataObj = new FormData();
 
-    formDataObj.append("banner_sort", formData.banner_sort);
-    formDataObj.append("banner_text", formData.banner_text);
-    formDataObj.append("banner_link", formData.banner_link || "");
-    formDataObj.append("banner_image_alt", formData.banner_image_alt);
-    if (formData.banner_image instanceof File) {
-      formDataObj.append("banner_image", formData.banner_image);
+    formDataObj.append("notification_date", formData.notification_date);
+    formDataObj.append("notification_heading", formData.notification_heading);
+    formDataObj.append(
+      "notification_description",
+      formData.notification_description,
+    );
+    if (formData.notification_image instanceof File) {
+      formDataObj.append("notification_image", formData.notification_image);
     }
     try {
       const res = await trigger({
-        url: BANNER_API.create,
+        url: NOTIFICATION_API.create,
         method: "post",
         data: formDataObj,
         headers: {
@@ -124,26 +112,26 @@ const CreateNotification = () => {
         },
       });
       if (res?.code === 201) {
-        toast.success(res?.msg || "Banner created successfully");
+        toast.success(res?.message || "Notification created successfully");
 
         setFormData({
-          banner_sort: "",
-          banner_text: "",
-          banner_link: "",
-          banner_image_alt: "",
+          notification_date: "",
+          notification_heading: "",
+          notification_description: "",
+          notification_image: null,
         });
         setErrors({});
 
-        const fileInput = document.getElementById("banner_image");
+        const fileInput = document.getElementById("notification_image");
         if (fileInput) fileInput.value = "";
-        queryClient.invalidateQueries(["banner-list"]);
+        queryClient.invalidateQueries(["notification-list"]);
 
-        navigate("/banner-list");
+        navigate("/notification");
       } else {
-        toast.error(res?.msg || "Failed to create banner");
+        toast.error(res?.message || "Failed to create notification");
       }
     } catch (error) {
-      const errors = error?.response?.data?.msg;
+      const errors = error?.response?.data?.message;
 
       toast.error(errors);
     }
@@ -191,65 +179,66 @@ const CreateNotification = () => {
           >
             <div className="space-y-2">
               <Label
-                htmlFor="notification_text"
+                htmlFor="notification_date"
                 className="text-sm font-medium"
               >
-                Notification Text
+                Notification Date
               </Label>
-              <Textarea
-                id="notification_text"
-                name="notification_text"
-                placeholder="Enter notification text"
-                value={formData.notification_text}
+              <Input
+                id="notification_date"
+                name="notification_date"
+                type="date"
+                placeholder="Enter notification date"
+                value={formData.notification_date}
                 onChange={handleInputChange}
-                className={errors.notification_text ? "border-red-500" : ""}
+                className={errors.notification_date ? "border-red-500" : ""}
               />
             </div>
 
             <div className="space-y-2">
               <Label
-                htmlFor="notification_link"
+                htmlFor="notification_heading"
                 className="text-sm font-medium"
               >
-                Notification Link
+                Notification Heading
               </Label>
-              <Textarea
-                id="notification_link"
-                name="notification_link"
-                type="url"
-                placeholder="https://example.com"
-                value={formData.notification_link}
+              <Input
+                id="notification_heading"
+                name="notification_heading"
+                type="text"
+                placeholder="Enter notification heading"
+                value={formData.notification_heading}
                 onChange={handleInputChange}
-                className={errors.notification_link ? "border-red-500" : ""}
+                className={errors.notification_heading ? "border-red-500" : ""}
               />
-              {errors.notification_link && (
+              {errors.notification_heading && (
                 <p className="text-sm text-red-500">
-                  {errors.notification_link}
+                  {errors.notification_heading}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label
-                htmlFor="notification_image_alt"
+                htmlFor="notification_description"
                 className="text-sm font-medium"
               >
-                Image Alt Text *
+                Notification Description
               </Label>
               <Textarea
-                id="notification_image_alt"
-                name="notification_image_alt"
-                placeholder="Describe the image for accessibility"
-                value={formData.notification_image_alt}
+                id="notification_description"
+                name="notification_description"
+                placeholder="Enter notification description"
+                value={formData.notification_description}
                 onChange={handleInputChange}
                 className={
-                  errors.notification_image_alt ? "border-red-500" : ""
+                  errors.notification_description ? "border-red-500" : ""
                 }
               />
               <div className="flex justify-between">
-                {errors.notification_image_alt && (
+                {errors.notification_description && (
                   <p className="text-sm text-red-500">
-                    {errors.notification_image_alt}
+                    {errors.notification_description}
                   </p>
                 )}
               </div>
@@ -267,11 +256,11 @@ const CreateNotification = () => {
                 }
                 onRemove={() => handleRemoveImage("notification_image")}
                 error={errors.notification_image}
-                format="WEBP"
-                allowedExtensions={["webp"]}
-                dimensions="1920x858"
+                // format="WEBP"
+                // allowedExtensions={["webp"]}
+                // dimensions="1920x858"
                 maxSize={5}
-                requiredDimensions={[1920, 858]}
+                // requiredDimensions={[1920, 858]}
               />
             </div>
           </form>
