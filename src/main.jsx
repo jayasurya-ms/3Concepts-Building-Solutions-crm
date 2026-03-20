@@ -9,6 +9,11 @@ import { ThemeProvider } from "./lib/theme-context.jsx";
 import { Provider } from "react-redux";
 import { persistor, store } from "./store/store.js";
 import { PersistGate } from "redux-persist/integration/react";
+import { Buffer } from "buffer";
+import process from "process";
+
+window.Buffer = Buffer;
+window.process = process;
 
 const queryClient = new QueryClient();
 
@@ -29,5 +34,5 @@ createRoot(document.getElementById("root")).render(
         </PersistGate>
       </BrowserRouter>
     </StrictMode>
-  </Provider>
+  </Provider>,
 );
