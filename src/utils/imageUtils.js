@@ -1,5 +1,4 @@
 export const getImageBaseUrl = (imageUrlArray = [], imageFor) => {
-  console.log(imageUrlArray, imageFor);
   return imageUrlArray.find((i) => i.image_for === imageFor)?.image_url || "";
 };
 

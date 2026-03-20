@@ -6,6 +6,7 @@ import { NOTIFICATION_API } from "@/constants/apiConstants";
 import { useGetApiMutation } from "@/hooks/useGetApiMutation";
 import { getImageBaseUrl, getNoImageUrl } from "@/utils/imageUtils";
 import { Edit } from "lucide-react";
+import moment from "moment";
 import { Link } from "react-router-dom";
 
 const NotificationList = () => {
@@ -18,7 +19,7 @@ const NotificationList = () => {
     url: NOTIFICATION_API.list,
     queryKey: ["notification-list"],
   });
-
+  // console.log(data?.data);
   const IMAGE_FOR = "Notification";
   const notificationBaseUrl = getImageBaseUrl(data?.image_url, IMAGE_FOR);
   const noImageUrl = getNoImageUrl(data?.image_url);
@@ -42,18 +43,20 @@ const NotificationList = () => {
       enableSorting: false,
     },
     {
-      header: "Sort Order",
-      accessorKey: "notification_sort",
+      header: "Date",
+      accessorKey: "notification_date",
+      cell: ({ row }) => {
+        return (
+          <span>
+            {moment(row.original.notification_date).format("DD-MM-YYYY")}
+          </span>
+        );
+      },
       enableSorting: false,
     },
     {
-      header: "Notification Text",
-      accessorKey: "notification_text",
-      enableSorting: false,
-    },
-    {
-      header: "Alt Text",
-      accessorKey: "notification_image_alt",
+      header: "Heading",
+      accessorKey: "notification_heading",
       enableSorting: false,
     },
     {
@@ -94,7 +97,7 @@ const NotificationList = () => {
   return (
     <>
       <DataTable
-        data={data?.data || []}
+        data={data?.data?.data || []}
         columns={columns}
         pageSize={10}
         searchPlaceholder="Search Notification..."
