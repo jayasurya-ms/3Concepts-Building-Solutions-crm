@@ -1,21 +1,25 @@
-import PageHeader from "@/components/common/page-header";
 import ImageUpload from "@/components/image-upload/image-upload";
+import Redstar from "@/components/Redstar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NOTIFICATION_API } from "@/constants/apiConstants";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Image, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-const CreateNotification = () => {
+const CreateNotification = ({ isOpen, onOpenChange }) => {
   const { trigger, loading: isSubmitting } = useApiMutation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     notification_date: "",
@@ -29,6 +33,7 @@ const CreateNotification = () => {
   const [preview, setPreview] = useState({
     notification_image: "",
   });
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -121,78 +126,52 @@ const CreateNotification = () => {
           notification_image: null,
         });
         setErrors({});
+        setPreview({ notification_image: "" });
 
-        const fileInput = document.getElementById("notification_image");
-        if (fileInput) fileInput.value = "";
         queryClient.invalidateQueries(["notification-list"]);
-
-        navigate("/notification");
+        onOpenChange(false);
       } else {
         toast.error(res?.message || "Failed to create notification");
       }
     } catch (error) {
       const errors = error?.response?.data?.message;
-
-      toast.error(errors);
+      toast.error(errors || "Something went wrong");
     }
   };
 
   return (
-    <div className="max-w-full mx-auto  ">
-      <PageHeader
-        icon={Image}
-        title="Add New Notification"
-        description="Fill in the details below to create a new notification"
-        rightContent={
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => navigate(-1)}
-            >
-              Back
-            </Button>
-            <Button
-              type="submit"
-              form="create-notification-form"
-              className="px-8"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Notification"
-              )}
-            </Button>
-          </div>
-        }
-      />
-      <Card className="mt-2">
-        <CardContent className="p-4">
-          <form
-            id="create-notification-form"
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-2"
-          >
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add New Notification</DialogTitle>
+        </DialogHeader>
+        <form
+          id="create-notification-form"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label
                 htmlFor="notification_date"
                 className="text-sm font-medium"
               >
-                Notification Date
+                Date <Redstar />
               </Label>
               <Input
                 id="notification_date"
                 name="notification_date"
                 type="date"
-                placeholder="Enter notification date"
+                placeholder="Select date"
                 value={formData.notification_date}
                 onChange={handleInputChange}
                 className={errors.notification_date ? "border-red-500" : ""}
               />
+              {errors.notification_date && (
+                <p className="text-sm text-red-500">
+                  {errors.notification_date}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -200,7 +179,7 @@ const CreateNotification = () => {
                 htmlFor="notification_heading"
                 className="text-sm font-medium"
               >
-                Notification Heading
+                Heading <Redstar />
               </Label>
               <Input
                 id="notification_heading"
@@ -217,56 +196,72 @@ const CreateNotification = () => {
                 </p>
               )}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label
-                htmlFor="notification_description"
-                className="text-sm font-medium"
-              >
-                Notification Description
-              </Label>
-              <Textarea
-                id="notification_description"
-                name="notification_description"
-                placeholder="Enter notification description"
-                value={formData.notification_description}
-                onChange={handleInputChange}
-                className={
-                  errors.notification_description ? "border-red-500" : ""
-                }
-              />
-              <div className="flex justify-between">
-                {errors.notification_description && (
-                  <p className="text-sm text-red-500">
-                    {errors.notification_description}
-                  </p>
-                )}
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label
+              htmlFor="notification_description"
+              className="text-sm font-medium"
+            >
+              Description <Redstar />
+            </Label>
+            <Textarea
+              id="notification_description"
+              name="notification_description"
+              placeholder="Enter notification description"
+              value={formData.notification_description}
+              onChange={handleInputChange}
+              className={
+                errors.notification_description ? "border-red-500" : ""
+              }
+              rows={4}
+            />
+            {errors.notification_description && (
+              <p className="text-sm text-red-500">
+                {errors.notification_description}
+              </p>
+            )}
+          </div>
 
-            <div>
-              <ImageUpload
-                id="notification_image"
-                label="Notification Image"
-                required
-                selectedFile={formData.notification_image}
-                previewImage={preview.notification_image}
-                onFileChange={(e) =>
-                  handleImageChange("notification_image", e.target.files?.[0])
-                }
-                onRemove={() => handleRemoveImage("notification_image")}
-                error={errors.notification_image}
-                // format="WEBP"
-                // allowedExtensions={["webp"]}
-                // dimensions="1920x858"
-                maxSize={5}
-                // requiredDimensions={[1920, 858]}
-              />
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          <div>
+            <Label htmlFor="notification_image" className="text-sm font-medium">
+              Image <Redstar />
+            </Label>
+            <ImageUpload
+              id="notification_image"
+              label=""
+              selectedFile={formData.notification_image}
+              previewImage={preview.notification_image}
+              onFileChange={(e) =>
+                handleImageChange("notification_image", e.target.files?.[0])
+              }
+              onRemove={() => handleRemoveImage("notification_image")}
+              error={errors.notification_image}
+              maxSize={5}
+            />
+          </div>
+          <DialogFooter className="gap-2 pt-4">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="px-8">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Notification"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

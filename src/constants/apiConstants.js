@@ -13,7 +13,13 @@ export const NOTIFICATION_API = {
   updateById: (id) => `/notification/${id}?_method=PUT`,
   updateStatus: (id) => `/notifications/${id}/status`,
 };
-
+export const EMPLOYEE_API = {  //refer this for employee
+  list: "/member",
+  create: "/member",
+  byId: (id) => `/member/${id}`,
+  updateById: (id) => `/member/${id}?_method=PUT`,
+  updateStatus: (id) => `/members/${id}/status`,
+};
 //old
 
 export const PROFILE = {

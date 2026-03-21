@@ -2,14 +2,22 @@ import ApiErrorPage from "@/components/api-error/api-error";
 import DataTable from "@/components/common/data-table";
 import ImageCell from "@/components/common/ImageCell";
 import LoadingBar from "@/components/loader/loading-bar";
+import ToggleStatus from "@/components/toogle/status-toogle";
+import { Button } from "@/components/ui/button";
 import { NOTIFICATION_API } from "@/constants/apiConstants";
 import { useGetApiMutation } from "@/hooks/useGetApiMutation";
 import { getImageBaseUrl, getNoImageUrl } from "@/utils/imageUtils";
-import { Edit } from "lucide-react";
+import { Edit, SquarePlus } from "lucide-react";
 import moment from "moment";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import CreateNotification from "./create-notification";
+import EditNotification from "./edit-notification";
 
 const NotificationList = () => {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedNotificationId, setSelectedNotificationId] = useState(null);
+
   const {
     data: data,
     isLoading,
@@ -19,10 +27,15 @@ const NotificationList = () => {
     url: NOTIFICATION_API.list,
     queryKey: ["notification-list"],
   });
-  // console.log(data?.data);
+
   const IMAGE_FOR = "Notification";
   const notificationBaseUrl = getImageBaseUrl(data?.image_url, IMAGE_FOR);
   const noImageUrl = getNoImageUrl(data?.image_url);
+
+  const handleEdit = (id) => {
+    setSelectedNotificationId(id);
+    setIsEditOpen(true);
+  };
 
   const columns = [
     {
@@ -64,36 +77,45 @@ const NotificationList = () => {
       accessorKey: "notification_status",
       cell: ({ row }) => (
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
+          className={`w-fit px-3 rounded-full text-xs font-medium flex items-center justify-center ${
             row.original.notification_status === "Active"
               ? "bg-green-100 text-green-800"
               : "bg-red-100 text-red-800"
           }`}
         >
-          {row.original.notification_status}
+          <ToggleStatus
+            initialStatus={row.original.notification_status}
+            apiUrl={NOTIFICATION_API.updateStatus(row.original.id)}
+            payloadKey="notification_status"
+            onSuccess={refetch}
+            method="patch"
+          />
         </span>
       ),
-      enableSorting: false,
     },
     {
       header: "Actions",
       accessorKey: "actions",
       cell: ({ row }) => (
-        <div>
-          <Link
-            title="notification edit"
-            to={`/edit-notification/${row.original.id}`}
-            className="cursor-pointer"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={() => handleEdit(row.original.id)}
+            title="Edit Notification"
           >
-            <Edit className=" h-4 w-4 hover:text-blue-600" />
-          </Link>
+            <Edit className="h-4 w-4" />
+          </Button>
         </div>
       ),
       enableSorting: false,
     },
   ];
+
   if (isLoading) return <LoadingBar />;
   if (isError) return <ApiErrorPage onRetry={refetch} />;
+
   return (
     <>
       <DataTable
@@ -101,10 +123,26 @@ const NotificationList = () => {
         columns={columns}
         pageSize={10}
         searchPlaceholder="Search Notification..."
-        addButton={{
-          to: "/add-notification",
-          label: "Add Notification",
-        }}
+        extraButton={
+          <Button
+            variant="default"
+            size="sm"
+            className="h-9"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <SquarePlus className="h-3 w-3 mr-2" />
+            Add Notification
+          </Button>
+        }
+      />
+      <CreateNotification
+        isOpen={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+      />
+      <EditNotification
+        isOpen={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        notificationId={selectedNotificationId}
       />
     </>
   );

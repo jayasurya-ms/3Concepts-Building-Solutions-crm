@@ -13,6 +13,7 @@ export function useGetApiMutation({
   const query = useQuery({
     queryKey: [...queryKey, params],
     queryFn: async () => {
+      if (!url) return null;
       const response = await trigger({
         url,
         method: "get",

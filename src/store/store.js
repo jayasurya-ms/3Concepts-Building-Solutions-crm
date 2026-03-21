@@ -55,6 +55,7 @@ export const store = configureStore({
           "persist/REGISTER",
         ],
       },
+      immutableCheck: { warnAfter: 128 },
     }),
 });
 

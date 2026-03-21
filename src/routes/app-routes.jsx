@@ -10,7 +10,9 @@ import { Route, Routes } from "react-router-dom";
 import AuthRoute from "./auth-route";
 import ProtectedRoute from "./protected-route";
 import NotificationList from "@/app/notification/notification-list";
-import CreateNotification from "@/app/notification/create-notification";
+import EmployeeList from "@/app/employee/employee-list";
+import CreateEmployee from "@/app/employee/create-employee";
+import EditEmployee from "@/app/employee/edit-employee";
 import Dashboard from "@/app/dashboard/dashboard";
 
 function AppRoutes() {
@@ -55,18 +57,26 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/add-notification"
+            path="/employee"
             element={
               <Suspense fallback={<LoadingBar />}>
-                <CreateNotification />
+                <EmployeeList />
               </Suspense>
             }
           />
           <Route
-            path="/edit-notification/:id"
+            path="/create-employee"
             element={
               <Suspense fallback={<LoadingBar />}>
-                <CreateNotification />
+                <CreateEmployee />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/edit-employee/:id"
+            element={
+              <Suspense fallback={<LoadingBar />}>
+                <EditEmployee />
               </Suspense>
             }
           />

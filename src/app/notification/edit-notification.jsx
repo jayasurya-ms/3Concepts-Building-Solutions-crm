@@ -1,82 +1,66 @@
-import ApiErrorPage from "@/components/api-error/api-error";
-import PageHeader from "@/components/common/page-header";
-import { GroupButton } from "@/components/group-button";
 import ImageUpload from "@/components/image-upload/image-upload";
-import LoadingBar from "@/components/loader/loading-bar";
+import Redstar from "@/components/Redstar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BANNER_API } from "@/constants/apiConstants";
+import { NOTIFICATION_API } from "@/constants/apiConstants";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useGetApiMutation } from "@/hooks/useGetApiMutation";
-import { getNoImageUrl } from "@/utils/imageUtils";
+import { getImageBaseUrl } from "@/utils/imageUtils";
 import { useQueryClient } from "@tanstack/react-query";
-import { Image, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import LoadingBar from "@/components/loader/loading-bar";
+import ApiErrorPage from "@/components/api-error/api-error";
 
-const EditBanner = () => {
-  const { id } = useParams();
-  const { trigger, loading: isSubmitting } = useApiMutation();
-  const navigate = useNavigate();
+const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
   const queryClient = useQueryClient();
-
-  const [formData, setFormData] = useState({
-    banner_sort: "",
-    banner_text: "",
-    banner_link: "",
-    banner_image_alt: "",
-    banner_status: "Active",
-    banner_image: null,
-  });
-
-  const [errors, setErrors] = useState({});
-  const [preview, setPreview] = useState({
-    banner_image: "",
-  });
+  const { trigger, loading: isSubmitting } = useApiMutation();
 
   const {
-    data: bannerData,
+    data: notificationData,
     isLoading,
     isError,
     refetch,
   } = useGetApiMutation({
-    url: BANNER_API.byId(id),
-    queryKey: ["banner-edit", id],
+    url: notificationId ? NOTIFICATION_API.byId(notificationId) : null,
+    queryKey: ["notification", notificationId],
+    enabled: !!notificationId && isOpen,
+  });
+
+  const [formData, setFormData] = useState({
+    notification_date: "",
+    notification_heading: "",
+    notification_image: "",
+    notification_description: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [preview, setPreview] = useState({
+    notification_image: "",
   });
 
   useEffect(() => {
-    if (bannerData?.data) {
-      const data = bannerData.data;
+    if (notificationData?.data && isOpen) {
+      const data = notificationData.data;
       setFormData({
-        banner_sort: data.banner_sort || "",
-        banner_text: data.banner_text || "",
-        banner_link: data.banner_link || "",
-        banner_image_alt: data.banner_image_alt || "",
-        banner_status: data.banner_status || "Active",
+        notification_date: data.notification_date || "",
+        notification_heading: data.notification_heading || "",
+        notification_description: data.notification_description || "",
+        notification_image: data.notification_image || "",
       });
 
-      if (data.banner_image) {
-        const IMAGE_FOR = "Banner";
-        const bannerBaseUrl = getImageBaseUrl(bannerData?.image_url, IMAGE_FOR);
-        const noImageUrl = getNoImageUrl(bannerData?.image_url);
-        const imagepath = bannerData?.data?.banner_image
-          ? `${bannerBaseUrl}${bannerData?.data?.banner_image}`
-          : noImageUrl;
+      if (data.notification_image) {
+        const baseUrl = getImageBaseUrl(notificationData.image_url, "Notification");
         setPreview({
-          banner_image: imagepath,
+          notification_image: `${baseUrl}${data.notification_image}`,
         });
       }
     }
-  }, [bannerData]);
-
-  const getImageBaseUrl = (imageUrlArray, imageFor) => {
-    const imageObj = imageUrlArray?.find((img) => img.image_for === imageFor);
-    return imageObj?.image_url || "";
-  };
+  }, [notificationData, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -97,26 +81,20 @@ const EditBanner = () => {
     const newErrors = {};
     let isValid = true;
 
-    if (!formData.banner_sort.trim()) {
-      newErrors.banner_sort = "Sort order is required";
-      isValid = false;
-    } else if (!/^\d+$/.test(formData.banner_sort)) {
-      newErrors.banner_sort = "Sort order must be a number";
+    if (!formData.notification_date) {
+      newErrors.notification_date = "Notification date is required";
       isValid = false;
     }
-
-    if (formData.banner_link.trim() && !isValidUrl(formData.banner_link)) {
-      newErrors.banner_link = "Please enter a valid URL";
+    if (!formData.notification_heading) {
+      newErrors.notification_heading = "Notification heading is required";
       isValid = false;
     }
-
-    if (!formData.banner_image_alt.trim()) {
-      newErrors.banner_image_alt = "Alt text is required";
+    if (!preview.notification_image && !formData.notification_image) {
+      newErrors.notification_image = "Notification image is required";
       isValid = false;
     }
-
-    if (!preview.banner_image && !formData.banner_image) {
-      newErrors.banner_image = "Banner image is required";
+    if (!formData.notification_description) {
+      newErrors.notification_description = "Notification description is required";
       isValid = false;
     }
 
@@ -124,14 +102,6 @@ const EditBanner = () => {
     return isValid;
   };
 
-  const isValidUrl = (string) => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
   const handleImageChange = (fieldName, file) => {
     if (file) {
       setFormData({ ...formData, [fieldName]: file });
@@ -140,6 +110,7 @@ const EditBanner = () => {
       setErrors({ ...errors, [fieldName]: "" });
     }
   };
+
   const handleRemoveImage = (fieldName) => {
     setFormData({ ...formData, [fieldName]: null });
     setPreview({ ...preview, [fieldName]: "" });
@@ -149,25 +120,22 @@ const EditBanner = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
+      toast.error("Please fill all the fields");
       return;
     }
 
     const formDataObj = new FormData();
-
-    formDataObj.append("banner_sort", formData.banner_sort);
-    formDataObj.append("banner_text", formData.banner_text);
-    formDataObj.append("banner_link", formData.banner_link || "");
-    formDataObj.append("banner_image_alt", formData.banner_image_alt);
-    formDataObj.append("banner_status", formData.banner_status);
-
-    if (formData.banner_image instanceof File) {
-      formDataObj.append("banner_image", formData.banner_image);
+    formDataObj.append("notification_date", formData.notification_date);
+    formDataObj.append("notification_heading", formData.notification_heading);
+    formDataObj.append("notification_description", formData.notification_description);
+    
+    if (formData.notification_image instanceof File) {
+      formDataObj.append("notification_image", formData.notification_image);
     }
 
     try {
       const res = await trigger({
-        url: BANNER_API.updateById(id),
+        url: NOTIFICATION_API.updateById(notificationId),
         method: "post",
         data: formDataObj,
         headers: {
@@ -175,186 +143,142 @@ const EditBanner = () => {
         },
       });
 
-      if (res?.code === 200) {
-        toast.success(res?.msg || "Banner updated successfully");
-
-        queryClient.invalidateQueries(["banner-list"]);
-        queryClient.invalidateQueries(["banner-edit", id]);
-        navigate("/banner-list");
+      if (res?.code === 200 || res?.code === 201) {
+        toast.success(res?.message || "Notification updated successfully");
+        queryClient.invalidateQueries(["notification-list"]);
+        queryClient.invalidateQueries(["notification", notificationId]);
+        onOpenChange(false);
       } else {
-        toast.error(res?.msg || "Failed to update banner");
+        toast.error(res?.message || "Failed to update notification");
       }
     } catch (error) {
-
-      const errors = error?.response?.data?.msg;
+      const errors = error?.response?.data?.message;
       toast.error(errors || "Something went wrong");
-
-      console.error("Banner update error:", error);
     }
   };
 
-  if (isError) return <ApiErrorPage onRetry={refetch} />;
   return (
-    <div className="max-w-full mx-auto">
-      {isLoading && <LoadingBar />}
-
-      <PageHeader
-        icon={Image}
-        title="Edit Banner"
-        description=" Update the details below to edit the banner"
-        rightContent={
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => navigate(-1)}
-            >
-              Back
-            </Button>
-            <Button
-              type="submit"
-              form="edit-banner-form"
-              className="px-8"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Banner"
-              )}
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Notification</DialogTitle>
+        </DialogHeader>
+        
+        {isLoading ? (
+          <div className="h-48 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : isError ? (
+          <div className="h-48 flex flex-col items-center justify-center gap-2">
+            <p className="text-sm text-red-500">Failed to load notification</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Retry
             </Button>
           </div>
-        }
-      />
-
-      <Card className="mt-2">
-        <CardContent className="p-4">
+        ) : (
           <form
+            id="edit-notification-form"
             onSubmit={handleSubmit}
-            id="edit-banner-form"
-            className="grid grid-cols-1 md:grid-cols-2 gap-2"
+            className="space-y-4"
           >
-            <div className="space-y-2">
-              <Label htmlFor="banner_sort" className="text-sm font-medium">
-                Sort Order *
-              </Label>
-              <Input
-                id="banner_sort"
-                name="banner_sort"
-                type="number"
-                min="1"
-                placeholder="Enter sort order (e.g., 1, 2, 3)"
-                value={formData.banner_sort}
-                onChange={handleInputChange}
-                className={errors.banner_sort ? "border-red-500" : ""}
-              />
-              {errors.banner_sort && (
-                <p className="text-sm text-red-500">{errors.banner_sort}</p>
-              )}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="notification_date" className="text-sm font-medium">
+                  Date <Redstar />
+                </Label>
+                <Input
+                  id="notification_date"
+                  name="notification_date"
+                  type="date"
+                  value={formData.notification_date}
+                  onChange={handleInputChange}
+                  className={errors.notification_date ? "border-red-500" : ""}
+                />
+                {errors.notification_date && (
+                  <p className="text-sm text-red-500">{errors.notification_date}</p>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="banner_text" className="text-sm font-medium">
-                Banner Text
-              </Label>
-              <Textarea
-                id="banner_text"
-                name="banner_text"
-                placeholder="Enter banner text"
-                value={formData.banner_text}
-                onChange={handleInputChange}
-                className={errors.banner_text ? "border-red-500" : ""}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="banner_link" className="text-sm font-medium">
-                Banner Link
-              </Label>
-              <Textarea
-                id="banner_link"
-                name="banner_link"
-                type="url"
-                placeholder="https://example.com"
-                value={formData.banner_link}
-                onChange={handleInputChange}
-                className={errors.banner_link ? "border-red-500" : ""}
-              />
-              {errors.banner_link && (
-                <p className="text-sm text-red-500">{errors.banner_link}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="banner_image_alt" className="text-sm font-medium">
-                Image Alt Text *
-              </Label>
-              <Textarea
-                id="banner_image_alt"
-                name="banner_image_alt"
-                placeholder="Describe the image for accessibility"
-                value={formData.banner_image_alt}
-                onChange={handleInputChange}
-                className={errors.banner_image_alt ? "border-red-500" : ""}
-              />
-              <div className="flex justify-between">
-                {errors.banner_image_alt && (
-                  <p className="text-sm text-red-500">
-                    {errors.banner_image_alt}
-                  </p>
+              <div className="space-y-2">
+                <Label htmlFor="notification_heading" className="text-sm font-medium">
+                  Heading <Redstar />
+                </Label>
+                <Input
+                  id="notification_heading"
+                  name="notification_heading"
+                  type="text"
+                  placeholder="Enter notification heading"
+                  value={formData.notification_heading}
+                  onChange={handleInputChange}
+                  className={errors.notification_heading ? "border-red-500" : ""}
+                />
+                {errors.notification_heading && (
+                  <p className="text-sm text-red-500">{errors.notification_heading}</p>
                 )}
               </div>
             </div>
-            <div className="">
+
+            <div className="space-y-2">
+              <Label htmlFor="notification_description" className="text-sm font-medium">
+                Description <Redstar />
+              </Label>
+              <Textarea
+                id="notification_description"
+                name="notification_description"
+                placeholder="Enter notification description"
+                value={formData.notification_description}
+                onChange={handleInputChange}
+                className={errors.notification_description ? "border-red-500" : ""}
+                rows={4}
+              />
+              {errors.notification_description && (
+                <p className="text-sm text-red-500">{errors.notification_description}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="notification_image" className="text-sm font-medium">
+                Image <Redstar />
+              </Label>
               <ImageUpload
-                id="banner_image"
-                label="Banner Image"
-                required
-                selectedFile={formData.banner_image}
-                previewImage={preview.banner_image}
+                id="notification_image"
+                label=""
+                selectedFile={formData.notification_image}
+                previewImage={preview.notification_image}
                 onFileChange={(e) =>
-                  handleImageChange("banner_image", e.target.files?.[0])
+                  handleImageChange("notification_image", e.target.files?.[0])
                 }
-                onRemove={() => handleRemoveImage("banner_image")}
-                error={errors.banner_image}
-                format="WEBP"
-                allowedExtensions={["webp"]}
-                dimensions="1920x858"
+                onRemove={() => handleRemoveImage("notification_image")}
+                error={errors.notification_image}
                 maxSize={5}
-                requiredDimensions={[1920, 858]}
               />
             </div>
-
-            <div className="flex items-center h-full ml-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="banner_status"
-                  className="text-sm text-muted-foreground"
-                >
-                  Status
-                </Label>
-
-                <GroupButton
-                  className="w-fit"
-                  value={formData.banner_status}
-                  onChange={(value) =>
-                    setFormData({ ...formData, banner_status: value })
-                  }
-                  options={[
-                    { label: "Active", value: "Active" },
-                    { label: "Inactive", value: "Inactive" },
-                  ]}
-                />
-              </div>
-            </div>
+            
+            <DialogFooter className="gap-2 pt-4">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="px-8">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Notification"
+                )}
+              </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default EditBanner;
+
+export default EditNotification;

@@ -9,20 +9,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
-  AudioWaveform,
-  Command,
   GalleryVerticalEnd,
   Bell,
   Settings2,
   LayoutDashboard,
   Boxes,
-  Package,
-  Layers,
-  Truck,
-  ShoppingCart,
-  Wrench,
+  User,
   ClipboardList,
-  Factory,
   BarChart3,
   PackageCheck,
   FileDown,
@@ -42,6 +35,11 @@ const NAVIGATION_CONFIG = {
       title: "Notification",
       url: "/notification",
       icon: Bell,
+    },
+    EMPLOYEE: {
+      title: "Employee",
+      url: "/employee",
+      icon: User,
     },
     REPORT: {
       title: "Report",
@@ -85,7 +83,7 @@ const NAVIGATION_CONFIG = {
 
 const USER_ROLE_PERMISSIONS = {
   1: {
-    navMain: ["DASHBOARD", "NOTIFICATION", "REPORT", "SETTINGS"],
+    navMain: ["DASHBOARD", "NOTIFICATION", "EMPLOYEE", "REPORT", "SETTINGS"],
     navMainReport: ["DASHBOARD", "SETTINGS"],
   },
 };
@@ -135,30 +133,22 @@ const useNavigationData = (userType) => {
   }, [userType]);
 };
 
-const Logo = ({ className }) => (
-  <img src="/chair-fevicon.png" alt="Logo" className={className} />
-);
-
-const TEAMS_CONFIG = [
-  {
-    name: "Chair Management",
-    logo: GalleryVerticalEnd,
-    plan: "",
-  },
-  {
-    name: "Acme Corp.",
-    logo: AudioWaveform,
-    plan: "Startup",
-  },
-  {
-    name: "Evil Corp.",
-    logo: Command,
-    plan: "Free",
-  },
-];
-
 export function AppSidebar({ ...props }) {
   const [openItem, setOpenItem] = useState(null);
+  const companyDetails = useSelector((state) => state.company.companyDetails);
+  const companyName = companyDetails?.company_name;
+
+  const TEAMS_CONFIG = useMemo(
+    () => [
+      {
+        name: "3 Concepts Building Solutions",
+        logo: GalleryVerticalEnd,
+        plan: "",
+      },
+    ],
+    [],
+  );
+
   const user = useSelector((state) => state.auth.user);
   const { navMain, navMainReport } = useNavigationData(user?.user_type);
   const initialData = {
