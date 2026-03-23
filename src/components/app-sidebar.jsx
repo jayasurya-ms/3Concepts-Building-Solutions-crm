@@ -15,12 +15,15 @@ import {
   LayoutDashboard,
   Boxes,
   User,
+  LandPlot,
   ClipboardList,
   BarChart3,
   PackageCheck,
   FileDown,
   Cog,
+  Gauge,
 } from "lucide-react";
+
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 
@@ -41,35 +44,46 @@ const NAVIGATION_CONFIG = {
       url: "/employee",
       icon: User,
     },
+    SITE: {
+      title: "Site",
+      url: "/site",
+      icon: LandPlot,
+    },
+    KM_READING: {
+      title: "KM Reading",
+      url: "/km-reading",
+      icon: Gauge,
+    },
+    TRIP: {
+      title: "Trip",
+      url: "/trip",
+      icon: Boxes,
+    },
+
     REPORT: {
       title: "Report",
       url: "#2",
       icon: BarChart3,
       items: [
         {
-          title: "Finished Stock",
-          url: "/report/productstock",
-          icon: PackageCheck,
+          title: "Employee",
+          url: "/report/employee",
+          icon: User,
         },
         {
-          title: "Component Stock",
-          url: "/report/componentstock",
+          title: "Site",
+          url: "/report/site",
+          icon: LandPlot,
+        },
+        {
+          title: "KM Reading",
+          url: "/report/km-reading",
+          icon: Gauge,
+        },
+        {
+          title: "Petrol Reimbursement",
+          url: "/report/petrol_reimbursement",
           icon: Boxes,
-        },
-        {
-          title: "Purchase Product",
-          url: "/report/purchaseproduct",
-          icon: FileDown,
-        },
-        {
-          title: "Purchase Component",
-          url: "/report/purchasecomponent",
-          icon: FileDown,
-        },
-        {
-          title: "Order",
-          url: "/report/order",
-          icon: ClipboardList,
         },
       ],
     },
@@ -83,7 +97,17 @@ const NAVIGATION_CONFIG = {
 
 const USER_ROLE_PERMISSIONS = {
   1: {
-    navMain: ["DASHBOARD", "NOTIFICATION", "EMPLOYEE", "REPORT", "SETTINGS"],
+    navMain: [
+      "DASHBOARD",
+      "NOTIFICATION",
+      "EMPLOYEE",
+      "SITE",
+      "KM_READING",
+      "TRIP",
+      "REPORT",
+      "SETTINGS",
+    ],
+
     navMainReport: ["DASHBOARD", "SETTINGS"],
   },
 };

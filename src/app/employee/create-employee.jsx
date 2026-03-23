@@ -243,13 +243,13 @@ const CreateEmployee = () => {
 
             <div className="space-y-2">
               <Label htmlFor="user_position" className="text-sm font-medium">
-                Position
+                Designation
               </Label>
               <Input
                 id="user_position"
                 name="user_position"
                 type="text"
-                placeholder="Enter employee position"
+                placeholder="Enter employee designation"
                 value={formData.user_position}
                 onChange={handleInputChange}
               />

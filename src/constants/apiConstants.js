@@ -6,6 +6,9 @@ export const PANEL_CHECK = {
   getPanelStatus: "/panel-check-status",
   getEnvStatus: "/panel-fetch-dotenv",
 };
+export const DASHBOARD_API = {
+  list: "/dashboard",
+};
 export const NOTIFICATION_API = {
   list: "/notification",
   create: "/notification",
@@ -20,6 +23,40 @@ export const EMPLOYEE_API = {  //refer this for employee
   updateById: (id) => `/member/${id}?_method=PUT`,
   updateStatus: (id) => `/members/${id}/status`,
 };
+export const ACTIVE_EMPLOYEE = {
+  list: "/activeMember",
+};
+export const SITE_API = {
+  list: "/site",
+  create: "/site",
+  byId: (id) => `/site/${id}`,
+  updateById: (id) => `/site/${id}?_method=PUT`,
+  updateStatus: (id) => `/sites/${id}/status`,
+};
+export const ACTIVE_SITE = {
+  list: "/activeSite",
+};
+export const KM_API = {
+  list: "/kmreading",
+  create: "/kmreading",
+  byId: (id) => `/kmreading/${id}`,
+  updateById: (id) => `/kmreading/${id}?_method=PUT`,
+  deleteById: (id) => `/kmreading/${id}`,
+};
+export const TRIP_API = {
+  list: "/trip",
+  create: "/trip",
+  byId: (id) => `/trip/${id}`,
+  updateById: (id) => `/trip/${id}?_method=PUT`,
+  deleteById: (id) => `/trip/${id}`,
+};
+export const REPORT_API = {
+  employee: "/employee-report",
+  site: "/site-report",
+  kmReading: "/kmreading-report",
+  trip: "/trip-petrol-reimbursement-report",
+};
+
 //old
 
 export const PROFILE = {
@@ -66,14 +103,6 @@ export const PRODUCTION_API = {
   deleteById: (id) => `/production/${id}`,
   deleteSubById: (id) => `/production-sub/${id}`,
   updateStatus: (id) => `/productions/${id}/status`,
-};
-
-export const REPORT_API = {
-  productstock: "/product-stock-report",
-  componentstock: "/component-stock-report",
-  purchaseProductReport: "/purchase-product-report",
-  purchaseComponentReport: "/purchase-component-report",
-  orderReport: "/order-report",
 };
 
 export const COMPANY_API = {

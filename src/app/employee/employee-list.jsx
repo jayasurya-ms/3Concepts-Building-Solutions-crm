@@ -93,8 +93,8 @@ const EmployeeList = () => {
       accessorKey: "actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-           <Edit 
-            className=" h-4 w-4 hover:text-blue-600 cursor-pointer" 
+          <Edit
+            className=" h-4 w-4 hover:text-blue-600 cursor-pointer"
             onClick={() => navigate(`/edit-employee/${row.original.id}`)}
           />
         </div>
