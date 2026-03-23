@@ -16,6 +16,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import LoadingBar from "@/components/loader/loading-bar";
 import ApiErrorPage from "@/components/api-error/api-error";
+import { GroupButton } from "@/components/group-button";
 
 const EditEmployee = () => {
   const { id } = useParams();
@@ -40,6 +41,7 @@ const EditEmployee = () => {
     employee_code: "",
     user_position: "",
     user_image: null,
+    status: "Active",
   });
 
   const [errors, setErrors] = useState({});
@@ -51,7 +53,7 @@ const EditEmployee = () => {
     if (employeeData) {
       // Defensive data extraction: some APIs nest the object under another 'data' key
       const data = employeeData.data?.data || employeeData.data;
-      
+
       if (data) {
         setFormData({
           name: data.name || "",
@@ -65,12 +67,13 @@ const EditEmployee = () => {
 
         if (data.user_image) {
           // Check both root and nested image_url, and both "Employee" and "Member" tags
-          const imageUrlArray = employeeData.image_url || employeeData.data?.image_url || [];
-          const baseUrl = 
-            getImageBaseUrl(imageUrlArray, "User") || 
-            getImageBaseUrl(imageUrlArray, "Employee") || 
+          const imageUrlArray =
+            employeeData.image_url || employeeData.data?.image_url || [];
+          const baseUrl =
+            getImageBaseUrl(imageUrlArray, "User") ||
+            getImageBaseUrl(imageUrlArray, "Employee") ||
             getImageBaseUrl(imageUrlArray, "Member");
-          
+
           if (baseUrl) {
             setPreview({
               user_image: `${baseUrl}${data.user_image}`,
@@ -116,10 +119,10 @@ const EditEmployee = () => {
       newErrors.employee_code = "Employee code is required";
       isValid = false;
     }
-    if (!preview.user_image && !formData.user_image) {
-      newErrors.user_image = "Image is required";
-      isValid = false;
-    }
+    // if (!preview.user_image && !formData.user_image) {
+    //   newErrors.user_image = "Image is required";
+    //   isValid = false;
+    // }
 
     setErrors(newErrors);
     return isValid;
@@ -300,13 +303,13 @@ const EditEmployee = () => {
 
             <div className="space-y-2">
               <Label htmlFor="user_position" className="text-sm font-medium">
-                Position
+                Designation
               </Label>
               <Input
                 id="user_position"
                 name="user_position"
                 type="text"
-                placeholder="Enter employee position"
+                placeholder="Enter employee designation"
                 value={formData.user_position}
                 onChange={handleInputChange}
               />
@@ -314,7 +317,7 @@ const EditEmployee = () => {
 
             <div>
               <Label htmlFor="user_image" className="text-sm font-medium">
-                Image <Redstar />
+                Image
               </Label>
               <ImageUpload
                 id="user_image"
@@ -327,6 +330,23 @@ const EditEmployee = () => {
                 onRemove={() => handleRemoveImage("user_image")}
                 error={errors.user_image}
                 maxSize={5}
+              />
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label className="text-sm font-semibold text-gray-700">
+                Status{" "}
+              </Label>
+              <GroupButton
+                className="w-fit"
+                value={formData.status}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, status: value }))
+                }
+                options={[
+                  { label: "Active", value: "Active" },
+                  { label: "Inactive", value: "Inactive" },
+                ]}
               />
             </div>
           </form>

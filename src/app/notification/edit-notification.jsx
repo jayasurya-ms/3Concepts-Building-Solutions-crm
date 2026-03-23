@@ -1,7 +1,13 @@
 import ImageUpload from "@/components/image-upload/image-upload";
 import Redstar from "@/components/Redstar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +21,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import LoadingBar from "@/components/loader/loading-bar";
 import ApiErrorPage from "@/components/api-error/api-error";
+import { GroupButton } from "@/components/group-button";
 
 const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
   const queryClient = useQueryClient();
@@ -36,6 +43,7 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
     notification_heading: "",
     notification_image: "",
     notification_description: "",
+    notification_status: "Active",
   });
 
   const [errors, setErrors] = useState({});
@@ -51,10 +59,14 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
         notification_heading: data.notification_heading || "",
         notification_description: data.notification_description || "",
         notification_image: data.notification_image || "",
+        notification_status: data.notification_status || "Active",
       });
 
       if (data.notification_image) {
-        const baseUrl = getImageBaseUrl(notificationData.image_url, "Notification");
+        const baseUrl = getImageBaseUrl(
+          notificationData.image_url,
+          "Notification",
+        );
         setPreview({
           notification_image: `${baseUrl}${data.notification_image}`,
         });
@@ -94,7 +106,8 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
       isValid = false;
     }
     if (!formData.notification_description) {
-      newErrors.notification_description = "Notification description is required";
+      newErrors.notification_description =
+        "Notification description is required";
       isValid = false;
     }
 
@@ -127,8 +140,12 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
     const formDataObj = new FormData();
     formDataObj.append("notification_date", formData.notification_date);
     formDataObj.append("notification_heading", formData.notification_heading);
-    formDataObj.append("notification_description", formData.notification_description);
-    
+    formDataObj.append(
+      "notification_description",
+      formData.notification_description,
+    );
+    formDataObj.append("notification_status", formData.notification_status);
+
     if (formData.notification_image instanceof File) {
       formDataObj.append("notification_image", formData.notification_image);
     }
@@ -163,7 +180,7 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
         <DialogHeader>
           <DialogTitle>Edit Notification</DialogTitle>
         </DialogHeader>
-        
+
         {isLoading ? (
           <div className="h-48 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -183,7 +200,10 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="notification_date" className="text-sm font-medium">
+                <Label
+                  htmlFor="notification_date"
+                  className="text-sm font-medium"
+                >
                   Date <Redstar />
                 </Label>
                 <Input
@@ -195,12 +215,17 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
                   className={errors.notification_date ? "border-red-500" : ""}
                 />
                 {errors.notification_date && (
-                  <p className="text-sm text-red-500">{errors.notification_date}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.notification_date}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notification_heading" className="text-sm font-medium">
+                <Label
+                  htmlFor="notification_heading"
+                  className="text-sm font-medium"
+                >
                   Heading <Redstar />
                 </Label>
                 <Input
@@ -210,16 +235,23 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
                   placeholder="Enter notification heading"
                   value={formData.notification_heading}
                   onChange={handleInputChange}
-                  className={errors.notification_heading ? "border-red-500" : ""}
+                  className={
+                    errors.notification_heading ? "border-red-500" : ""
+                  }
                 />
                 {errors.notification_heading && (
-                  <p className="text-sm text-red-500">{errors.notification_heading}</p>
+                  <p className="text-sm text-red-500">
+                    {errors.notification_heading}
+                  </p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notification_description" className="text-sm font-medium">
+              <Label
+                htmlFor="notification_description"
+                className="text-sm font-medium"
+              >
                 Description <Redstar />
               </Label>
               <Textarea
@@ -228,16 +260,23 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
                 placeholder="Enter notification description"
                 value={formData.notification_description}
                 onChange={handleInputChange}
-                className={errors.notification_description ? "border-red-500" : ""}
+                className={
+                  errors.notification_description ? "border-red-500" : ""
+                }
                 rows={4}
               />
               {errors.notification_description && (
-                <p className="text-sm text-red-500">{errors.notification_description}</p>
+                <p className="text-sm text-red-500">
+                  {errors.notification_description}
+                </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="notification_image" className="text-sm font-medium">
+              <Label
+                htmlFor="notification_image"
+                className="text-sm font-medium"
+              >
                 Image <Redstar />
               </Label>
               <ImageUpload
@@ -253,7 +292,27 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
                 maxSize={5}
               />
             </div>
-            
+
+            <div className="space-y-3 pt-2">
+              <Label className="text-sm font-semibold text-gray-700">
+                Status{" "}
+              </Label>
+              <GroupButton
+                className="w-fit"
+                value={formData.notification_status}
+                onChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    notification_status: value,
+                  }))
+                }
+                options={[
+                  { label: "Active", value: "Active" },
+                  { label: "Inactive", value: "Inactive" },
+                ]}
+              />
+            </div>
+
             <DialogFooter className="gap-2 pt-4">
               <Button
                 variant="outline"
@@ -279,6 +338,5 @@ const EditNotification = ({ isOpen, onOpenChange, notificationId }) => {
     </Dialog>
   );
 };
-
 
 export default EditNotification;

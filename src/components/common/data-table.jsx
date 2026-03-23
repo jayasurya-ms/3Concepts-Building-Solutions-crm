@@ -43,6 +43,8 @@ const DataTable = ({
   extraButton,
   expandableRow,
   serverPagination,
+  hideSearch = false,
+  hideColumns = false,
 }) => {
   const isServer = !!serverPagination;
   const [sorting, setSorting] = useState([]);
@@ -108,6 +110,7 @@ const DataTable = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between py-1">
+        {!hideSearch && (
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
@@ -127,8 +130,10 @@ const DataTable = ({
             className="pl-8 h-9 text-sm bg-gray-50 border-gray-200"
           />
         </div>
+        )}
 
         <div className="flex items-center gap-2">
+          {!hideColumns && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -159,6 +164,7 @@ const DataTable = ({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
 
           {addButton &&
             (addButton.to ? (

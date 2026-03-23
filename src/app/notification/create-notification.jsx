@@ -162,6 +162,7 @@ const CreateNotification = ({ isOpen, onOpenChange }) => {
                 id="notification_date"
                 name="notification_date"
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 placeholder="Select date"
                 value={formData.notification_date}
                 onChange={handleInputChange}
