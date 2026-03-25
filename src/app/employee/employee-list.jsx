@@ -53,6 +53,11 @@ const EmployeeList = () => {
       enableSorting: true,
     },
     {
+      header: "Employee Code",
+      accessorKey: "employee_code",
+      enableSorting: true,
+    },
+    {
       header: "Email",
       accessorKey: "email",
       enableSorting: true,
@@ -63,7 +68,7 @@ const EmployeeList = () => {
       enableSorting: false,
     },
     {
-      header: "Position",
+      header: "Designation",
       accessorKey: "user_position",
       enableSorting: true,
     },
