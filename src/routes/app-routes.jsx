@@ -23,6 +23,7 @@ import SiteReport from "@/app/report/site.jsx";
 import KMReadingReport from "@/app/report/km-reading.jsx";
 import TripReport from "@/app/report/Petrol-Reimbursement.jsx";
 import PetrolReimbursementDetail from "@/app/report/Petrol-Reimbursement-Detail.jsx";
+import PlaceReport from "@/app/report/place";
 
 function AppRoutes() {
   return (
@@ -152,6 +153,14 @@ function AppRoutes() {
             element={
               <Suspense fallback={<LoadingBar />}>
                 <PetrolReimbursementDetail />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/report/site_expenses"
+            element={
+              <Suspense fallback={<LoadingBar />}>
+                <PlaceReport />
               </Suspense>
             }
           />

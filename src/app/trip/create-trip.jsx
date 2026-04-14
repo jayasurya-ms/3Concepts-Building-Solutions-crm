@@ -1,315 +1,329 @@
+import React, { useState, useMemo } from "react";
 import PageHeader from "@/components/common/page-header";
-import Redstar from "@/components/Redstar";
+import XLSX from "xlsx-js-style";
+import moment from "moment";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TRIP_API, ACTIVE_EMPLOYEE, ACTIVE_SITE } from "@/constants/apiConstants";
+import { REPORT_API, ACTIVE_SITE } from "@/constants/apiConstants";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useGetApiMutation } from "@/hooks/useGetApiMutation";
-import { useQueryClient } from "@tanstack/react-query";
+import { FileSpreadsheet, Gauge, Search, Loader2 } from "lucide-react";
 
-import moment from "moment";
-import { Loader2, ArrowLeft, Boxes } from "lucide-react";
+const PlaceReport = () => {
+  const [reportData, setReportData] = useState([]);
+  const [selectedSite, setSelectedSite] = useState("");
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [details, setDetails] = useState([]);
 
-
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-
-const CreateTrip = () => {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-
-  const { trigger, loading: isSubmitting } = useApiMutation();
-
-  const { data: employeesData } = useGetApiMutation({
-    url: ACTIVE_EMPLOYEE.list,
-    queryKey: ["active-employees"],
+  const [filters, setFilters] = useState({
+    from_date: moment().startOf("month").format("YYYY-MM-DD"),
+    to_date: moment().format("YYYY-MM-DD"),
+    site_id: null,
   });
 
+  const { trigger: fetchReport, loading: isSearching } = useApiMutation();
+
+  // ✅ FETCH SITES (NO useMemo needed)
   const { data: sitesData } = useGetApiMutation({
     url: ACTIVE_SITE.list,
     queryKey: ["active-sites"],
   });
 
-  const activeEmployees = employeesData?.data?.data || employeesData?.data || [];
   const activeSites = sitesData?.data?.data || sitesData?.data || [];
 
-  const [formData, setFormData] = useState({
-    trips_date: new Date().toISOString().split("T")[0],
-    trips_time: moment().format("HH:mm"),
-    user_id: "",
-    trips_from_id: "",
-    trips_to_id: "",
-  });
-
-  const [errors, setErrors] = useState({});
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    let isValid = true;
-
-    if (!formData.trips_date) {
-      newErrors.trips_date = "Date is required";
-      isValid = false;
-    }
-    if (!formData.trips_time) {
-      newErrors.trips_time = "Time is required";
-      isValid = false;
-    }
-    if (!formData.user_id) {
-      newErrors.user_id = "Employee is required";
-      isValid = false;
-    }
-    if (!formData.trips_from_id) {
-      newErrors.trips_from_id = "From Site is required";
-      isValid = false;
-    }
-    if (!formData.trips_to_id) {
-      newErrors.trips_to_id = "To Site is required";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    const formDataObj = new FormData();
-    Object.keys(formData).forEach((key) => {
-      formDataObj.append(key, formData[key]);
-    });
-
+  // ✅ FETCH REPORT
+  const getReport = async () => {
     try {
-      const res = await trigger({
-        url: TRIP_API.create,
+      const formData = new FormData();
+      formData.append("from_date", filters.from_date);
+      formData.append("to_date", filters.to_date);
+      formData.append("site_id", filters.site_id);
+
+      const res = await fetchReport({
+        url: REPORT_API.place,
         method: "post",
-        data: formDataObj,
+        data: formData,
       });
 
-      if (res?.code === 201 || res?.code === 200) {
-        toast.success(res?.message || "Trip created successfully");
-        queryClient.invalidateQueries(["trip-list"]);
-        navigate("/trip");
-
-      } else {
-        toast.error(res?.message || "Failed to create trip");
-      }
+      setReportData(res?.data?.trips || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Something went wrong");
+      console.error("Report fetch failed", error);
+      setReportData([]);
     }
   };
 
+  // ✅ GROUPING (SITE → DATE)
+  const groupedBySite = useMemo(() => {
+    const grouped = {};
+
+    reportData.forEach((item) => {
+      const siteKey =
+        item.trips_to_id !== 1 ? item.trips_to_id : item.trips_from_id;
+
+      const siteName = item.trips_to_id !== 1 ? item.to_site : item.from_site;
+
+      if (!grouped[siteKey]) {
+        grouped[siteKey] = {
+          name: siteName,
+          dates: {},
+          total: 0,
+        };
+      }
+
+      const date = item.trips_date;
+
+      if (!grouped[siteKey].dates[date]) {
+        grouped[siteKey].dates[date] = 0;
+      }
+
+      const km = parseFloat(item.trips_km || 0);
+
+      grouped[siteKey].dates[date] += km;
+      grouped[siteKey].total += km;
+    });
+
+    return grouped;
+  }, [reportData]);
+
+  // ✅ EXPORT
+  const handleExportExcel = () => {
+    const wsData = [];
+
+    Object.values(groupedBySite).forEach((site) => {
+      Object.keys(site.dates).forEach((date) => {
+        wsData.push({
+          Site: site.name,
+          Date: moment(date).format("DD-MM-YYYY"),
+          "Total KM": site.dates[date].toFixed(2),
+        });
+      });
+    });
+
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Site Wise Report");
+
+    XLSX.writeFile(
+      wb,
+      `Site_Wise_Report_${moment().format("DD-MM-YYYY")}.xlsx`,
+    );
+  };
+
+  // ✅ DRILL DOWN
+  const handleRowClick = ({ date, site }) => {
+    const filtered = reportData.filter((item) => {
+      const siteName = item.trips_to_id !== 1 ? item.to_site : item.from_site;
+
+      return item.trips_date === date && siteName === site;
+    });
+
+    setSelectedRow({ date, site });
+    setDetails(filtered);
+  };
+
+  // ✅ GRAND TOTAL
+  const grandTotal = Object.values(groupedBySite).reduce(
+    (sum, site) => sum + site.total,
+    0,
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
-        icon={Boxes}
-        title="Add New Trip"
-        description="Enter the details below to create a new trip record."
-        rightContent={
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => navigate("/trip")}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="create-trip-form"
-              disabled={isSubmitting}
-              className="px-8"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Create Trip"
-              )}
-            </Button>
-          </div>
-        }
+        icon={Gauge}
+        title="Site Wise KM Report"
+        description="View KM grouped by date and site"
       />
 
-      <Card className="mt-2">
-        <CardContent className="p-4">
-          <form
-            id="create-trip-form"
-            onSubmit={handleSubmit}
-            className="space-y-6"
+      {/* FILTERS */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 bg-white p-3 rounded-lg border shadow-sm">
+        <div>
+          <Label className="text-xs">From Date</Label>
+          <Input
+            type="date"
+            value={filters.from_date}
+            onChange={(e) =>
+              setFilters({ ...filters, from_date: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <Label className="text-xs">To Date</Label>
+          <Input
+            type="date"
+            value={filters.to_date}
+            onChange={(e) =>
+              setFilters({ ...filters, to_date: e.target.value })
+            }
+          />
+        </div>
+
+        <div className="flex gap-2 col-span-3 items-end">
+          {/* SITE FILTER */}
+          <select
+            className="border rounded-xl h-9 px-2 w-1/3"
+            value={selectedSite}
+            onChange={(e) => setSelectedSite(e.target.value)}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="trips_date" className="text-sm font-semibold">
-                  Date <Redstar />
-                </Label>
-                <Input
-                  id="trips_date"
-                  name="trips_date"
-                  type="date"
-                  value={formData.trips_date}
-                  onChange={handleInputChange}
-                  className={errors.trips_date ? "border-red-500" : ""}
-                  max={new Date().toISOString().split("T")[0]}
-                />
-                {errors.trips_date && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.trips_date}
-                  </p>
-                )}
-              </div>
+            <option value="">All Sites</option>
+            {activeSites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
 
-              <div className="space-y-2">
-                <Label htmlFor="trips_time" className="text-sm font-semibold">
-                  Time <Redstar />
-                </Label>
-                <Input
-                  id="trips_time"
-                  name="trips_time"
-                  type="time"
-                  value={formData.trips_time}
-                  onChange={handleInputChange}
-                  className={errors.trips_time ? "border-red-500" : ""}
-                />
-                {errors.trips_time && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.trips_time}
-                  </p>
-                )}
-              </div>
+          <Button
+            onClick={getReport}
+            disabled={isSearching}
+            className="w-1/3 flex gap-2"
+          >
+            {isSearching ? (
+              <Loader2 className="animate-spin h-4" />
+            ) : (
+              <Search className="h-4" />
+            )}
+            Fetch
+          </Button>
 
-              <div className="space-y-2">
-                <Label htmlFor="user_id" className="text-sm font-semibold">
-                  Employee <Redstar />
-                </Label>
-                <select
-                  id="user_id"
-                  name="user_id"
-                  value={formData.user_id}
-                  onChange={handleInputChange}
-                  className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    errors.user_id ? "border-red-500" : ""
-                  }`}
-                >
-                  <option value="">Select Employee</option>
-                  {activeEmployees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.employee_code})
-                    </option>
-                  ))}
-                </select>
-                {errors.user_id && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.user_id}
-                  </p>
-                )}
-              </div>
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="w-1/3 flex gap-2"
+            disabled={!Object.keys(groupedBySite).length}
+          >
+            <FileSpreadsheet className="h-4" />
+            Export
+          </Button>
+        </div>
+      </div>
 
-              {/* <div className="space-y-2">
-                <Label htmlFor="trips_km" className="text-sm font-semibold">
-                  KM Reading <Redstar />
-                </Label>
-                <Input
-                  id="trips_km"
-                  name="trips_km"
-                  type="number"
-                  min={0}
-                  placeholder="Enter KM"
-                  value={formData.trips_km}
-                  onChange={handleInputChange}
-                  className={errors.trips_km ? "border-red-500" : ""}
-                />
-                {errors.trips_km && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.trips_km}
-                  </p>
-                )}
-              </div> */}
+      {/* GRAND TOTAL */}
+      <div className="ms-5 text-lg font-semibold text-violet-700">
+        Total KM - {grandTotal.toFixed(2)}
+      </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="trips_from_id" className="text-sm font-semibold">
-                  From Site <Redstar />
-                </Label>
-                <select
-                  id="trips_from_id"
-                  name="trips_from_id"
-                  value={formData.trips_from_id}
-                  onChange={handleInputChange}
-                  className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    errors.trips_from_id ? "border-red-500" : ""
-                  }`}
-                >
-                  <option value="">Select From Site</option>
-                  {activeSites
-                    .filter((site) => site.id != formData.trips_to_id)
-                    .map((site) => (
-                      <option key={site.id} value={site.id}>
-                        {site.site_name}
-                      </option>
-                    ))}
-                </select>
-                {errors.trips_from_id && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.trips_from_id}
-                  </p>
-                )}
-              </div>
+      {/* REPORT UI */}
+      <div className="space-y-6">
+        {Object.keys(groupedBySite)
+          .sort()
+          .map((siteKey) => {
+            const site = groupedBySite[siteKey];
 
-              <div className="space-y-2">
-                <Label htmlFor="trips_to_id" className="text-sm font-semibold">
-                  To Site <Redstar />
-                </Label>
-                <select
-                  id="trips_to_id"
-                  name="trips_to_id"
-                  value={formData.trips_to_id}
-                  onChange={handleInputChange}
-                  className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    errors.trips_to_id ? "border-red-500" : ""
-                  }`}
-                >
-                  <option value="">Select To Site</option>
-                  {activeSites
-                    .filter((site) => site.id != formData.trips_from_id)
-                    .map((site) => (
-                      <option key={site.id} value={site.id}>
-                        {site.site_name}
-                      </option>
-                    ))}
-                </select>
-                {errors.trips_to_id && (
-                  <p className="text-xs font-medium text-red-500">
-                    {errors.trips_to_id}
-                  </p>
-                )}
+            return (
+              <div
+                key={siteKey}
+                className="bg-white p-4 rounded-lg border shadow-sm"
+              >
+                <h2 className="flex justify-between mb-3">
+                  <span className="text-lg font-semibold text-violet-700">
+                    {site.name}
+                  </span>
+                  <span className="font-semibold">
+                    Total KM/Site - {site.total.toFixed(2)}
+                  </span>
+                </h2>
+
+                <table className="w-full text-sm border">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="p-2 border text-left">Date</th>
+                      <th className="p-2 border text-left">Total KM/Day</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {Object.keys(site.dates)
+                      .sort()
+                      .map((date, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="p-2 border">
+                            {moment(date).format("DD-MM-YYYY")}
+                          </td>
+
+                          <td
+                            className="p-2 border text-violet-600 font-semibold cursor-pointer underline"
+                            onClick={() =>
+                              handleRowClick({
+                                date,
+                                site: site.name,
+                              })
+                            }
+                          >
+                            {site.dates[date].toFixed(2)} KM
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
+            );
+          })}
+      </div>
+
+      {/* MODAL */}
+      {selectedRow && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setSelectedRow(null)}
+        >
+          <div
+            className="bg-white rounded-xl w-[700px] max-h-[80vh] overflow-auto p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between mb-4">
+              <h3 className="font-semibold">
+                Details for {selectedRow.site} on{" "}
+                {moment(selectedRow.date).format("DD-MM-YYYY")}
+              </h3>
+              <button onClick={() => setSelectedRow(null)}>✕</button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
 
+            <table className="w-full text-sm border">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-2 border">Time</th>
+                  <th className="p-2 border">Employee</th>
+                  <th className="p-2 border">From</th>
+                  <th className="p-2 border">To</th>
+                  <th className="p-2 border">KM</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {details.map((item, i) => (
+                  <tr key={i}>
+                    <td className="p-2 border">{item.trips_time}</td>
+                    <td className="p-2 border">
+                      {item.name}
+                      <div className="text-xs text-gray-500">
+                        {item.employee_code}
+                      </div>
+                    </td>
+                    <td className="p-2 border">{item.from_site}</td>
+                    <td className="p-2 border">{item.to_site}</td>
+                    <td className="p-2 border">
+                      {parseFloat(item.trips_km).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="text-right mt-3 font-semibold text-violet-600">
+              Total:{" "}
+              {details
+                .reduce((sum, item) => sum + parseFloat(item.trips_km || 0), 0)
+                .toFixed(2)}{" "}
+              KM
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default CreateTrip;
+export default PlaceReport;

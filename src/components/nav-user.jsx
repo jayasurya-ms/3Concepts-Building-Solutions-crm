@@ -94,7 +94,7 @@ export function NavUser({ user }) {
                 <div className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground px-4 py-2 w-full  h-10 ">
                   <div className="flex justify-between items-center h-full w-full text-xs leading-tight text-center">
                     <span className="flex items-center gap-1 font-semibold">
-                      Updated on : 25-03-2026
+                      Updated on : 14-04-2026
                     </span>
                   </div>
                 </div>
