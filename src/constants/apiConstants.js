@@ -55,6 +55,7 @@ export const REPORT_API = {
   site: "/site-report",
   kmReading: "/kmreading-report",
   trip: "/trip-petrol-reimbursement-report",
+  place: "/trip-petrol-place-report"
 };
 
 //old
