@@ -15,8 +15,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const CreateSite = ({ isOpen, onOpenChange }) => {
   const queryClient = useQueryClient();
@@ -24,29 +31,35 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
 
   const [formData, setFormData] = useState({
     site_name: "",
+    site_type: "",
     site_address: "",
     site_url: "",
+    place_id: "",
   });
 
   const [errors, setErrors] = useState({});
   const autoCompleteRef = useRef(null);
   const autoCompleteInstance = useRef(null);
+  const lastSelectedAddress = useRef("");
 
-  const handlePlaceSelect = async () => {
-    const addressObject = await autoCompleteInstance.current.getPlace();
-    const query = addressObject.formatted_address;
-    const url = addressObject.url;
+  const handlePlaceSelect = () => {
+    const place = autoCompleteInstance.current.getPlace();
 
+    if (!place || !place.formatted_address) return;
+
+    lastSelectedAddress.current = place.formatted_address;
     setFormData((prev) => ({
       ...prev,
-      site_address: query || "",
-      site_url: url || prev.site_url,
+      site_address: place.formatted_address,
+      site_url: place.url || "",
+      place_id: place.place_id || "",
     }));
   };
 
-  const handleScriptLoad = async () => {
+  const handleScriptLoad = useCallback(async () => {
     try {
       const { Autocomplete } = await window.google.maps.importLibrary("places");
+
       autoCompleteInstance.current = new Autocomplete(autoCompleteRef.current, {
         componentRestrictions: { country: "IN" },
       });
@@ -57,10 +70,11 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
     } catch (error) {
       console.error("Error loading Google Maps library:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let checkGoogle;
+
     if (isOpen) {
       if (window.google && window.google.maps) {
         handleScriptLoad();
@@ -82,17 +96,37 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
         );
       }
     };
+  }, [isOpen, handleScriptLoad]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        site_name: "",
+        site_type: "",
+        site_address: "",
+        site_url: "",
+        place_id: "",
+      });
+      setErrors({});
+    }
   }, [isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      if (name === "site_address" && !value) {
-        updated.site_url = "";
+
+      if (name === "site_address") {
+        if (value !== lastSelectedAddress.current) {
+          updated.site_url = "";
+          updated.place_id = "";
+        }
       }
+
       return updated;
     });
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -110,23 +144,36 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
       newErrors.site_address = "Site address is required";
       isValid = false;
     }
+    if (!formData.site_type) {
+      newErrors.site_type = "Site type is required";
+      isValid = false;
+    }
+    if (!formData.site_url) {
+      newErrors.site_address = "Site address is not valid";
+      isValid = false;
+    }
 
     setErrors(newErrors);
-    return isValid;
+    return { isValid, errors: newErrors };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      toast.error("Please fill in required fields");
+    const { isValid, errors: validationErrors } = validateForm();
+
+    if (!isValid) {
+      const firstError = Object.values(validationErrors)[0];
+      toast.error(firstError || "Please fill in required fields");
       return;
     }
 
     const formDataObj = new FormData();
     formDataObj.append("site_name", formData.site_name);
+    formDataObj.append("site_type", formData.site_type);
     formDataObj.append("site_address", formData.site_address);
     formDataObj.append("site_url", formData.site_url);
+    formDataObj.append("place_id", formData.place_id);
 
     try {
       const res = await trigger({
@@ -139,8 +186,10 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
         toast.success(res?.message || "Site created successfully");
         setFormData({
           site_name: "",
+          site_type: "",
           site_address: "",
           site_url: "",
+          place_id: "",
         });
         setErrors({});
         queryClient.invalidateQueries(["site-list"]);
@@ -156,7 +205,14 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl"
+        onPointerDownOutside={(e) => {
+          if (e.target.closest(".pac-container")) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Add New Site</DialogTitle>
         </DialogHeader>
@@ -167,7 +223,7 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
           className="space-y-6"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label
                   htmlFor="site_name"
@@ -193,6 +249,45 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
               </div>
               <div className="space-y-2">
                 <Label
+                  htmlFor="site_type"
+                  className="text-sm font-semibold flex items-center gap-1"
+                >
+                  Site Type <Redstar />
+                </Label>
+                <div className="relative">
+                  <Select
+                    value={formData.site_type}
+                    onValueChange={(value) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        site_type: value,
+                      }));
+
+                      if (errors.site_type) {
+                        setErrors((prev) => ({
+                          ...prev,
+                          site_type: "",
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Original">Original</SelectItem>
+                      <SelectItem value="Temp">Temp</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {errors.site_type && (
+                  <p className="text-xs font-medium text-red-500">
+                    {errors.site_type}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label
                   htmlFor="site_address"
                   className="text-sm font-semibold flex items-center gap-1 text-gray-700"
                 >
@@ -205,8 +300,39 @@ const CreateSite = ({ isOpen, onOpenChange }) => {
                   placeholder="Search site address"
                   value={formData.site_address}
                   onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.preventDefault();
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setFormData((prev) => {
+                        if (!prev.place_id && !prev.site_url) {
+                          if (errors.site_address) {
+                            setErrors((errorsPrev) => ({
+                              ...errorsPrev,
+                              site_address: "",
+                            }));
+                          }
+                          return { ...prev, site_address: "" };
+                        }
+                        return prev;
+                      });
+                    }, 200);
+                  }}
                   className={`pl-3 ${errors.site_address ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
+                {formData.site_url && (
+                  <p className="text-xs font-medium text-gray-500 pt-1">
+                    <a
+                      href={formData.site_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      {formData.site_url}
+                    </a>
+                  </p>
+                )}
                 {errors.site_address && (
                   <p className="text-xs font-medium text-red-500">
                     {errors.site_address}
