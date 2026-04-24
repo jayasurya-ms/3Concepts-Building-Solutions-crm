@@ -66,6 +66,17 @@ const SiteList = () => {
         ),
     },
     {
+      header: "Site Type",
+      accessorKey: "site_type",
+      cell: ({ row }) => (
+        <div className="flex items-start gap-1 max-w-[250px]">
+          <span className="text-sm text-gray-600 line-clamp-2">
+            {row.original.site_type || "N/A"}
+          </span>
+        </div>
+      ),
+    },
+    {
       header: "Status",
       accessorKey: "site_status",
       cell: ({ row }) => (
